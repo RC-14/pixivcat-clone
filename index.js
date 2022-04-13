@@ -9,7 +9,6 @@ const http = require('http');
 const https = require('https');
 
 const port = process.env.PORT || 8080;
-const cache = new Map();
 const pathExpression = /^\/(\d+)(?:-(\d+))?\.jpg$/;
 
 const parsePath = (path) => {
