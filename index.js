@@ -33,14 +33,41 @@ const {port, userAgent, cookie} = (()=>{
     return config;
 })();
 
-const pathExpression = /^\/(\d+)(?:-(\d+))?\.jpg$/;
+const htmlRequestHeaders = {
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+    "accept-encoding": "gzip, deflate, br",
+    "accept-language": "en-US,en;q=0.9",
+    "cache-control": "max-age=0",
+    "cookie": cookie || "",
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "none",
+    "sec-fetch-user": "?1",
+    "sec-gpc": "1",
+    "upgrade-insecure-requests": "1",
+    "user-agent": userAgent,
+};
+const imageRequestHeaders = {
+    "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    "accept-encoding": "gzip, deflate, br",
+    "accept-language": "en-US,en;q=0.9",
+    "cache-control": "no-cache",
+    "dnt": "1",
+    "pragma": "no-cache",
+    "referer": "https://www.pixiv.net/",
+    "sec-fetch-dest": "image",
+    "sec-fetch-mode": "no-cors",
+    "sec-fetch-site": "cross-site",
+    "sec-gpc": "1",
+    "user-agent": userAgent,
+};
 
 const parsePath = (path) => {
-    const pathMatch = path.match(pathExpression);
+    const pathMatch = path.match(/^\/(\d+)(?:-(\d+))?\.(jpe?g|png|gif)$/);
     if (!pathMatch) {
         return null;
     }
-    return { illustId: pathMatch[1], page: pathMatch[2] };
+    return { illustId: pathMatch[1], page: pathMatch[2] || null };
 };
 
 const server = http.createServer((req, res) => {
