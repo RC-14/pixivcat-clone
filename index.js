@@ -9,7 +9,7 @@ const http = require('http');
 const https = require('https');
 
 // Read config from pixivcat-clone.config with an anonymous function to avoid polluting global namespace
-const {port, userAgent, cookie} = (()=>{
+const { port, userAgent, cookie } = (() => {
     // ONLY CONFIGURE FROM CONFIG FILE!
     // DO NOT CONFIGURE DIRECTLY IN CODE!
     let config = JSON.parse(fs.readFileSync('pixivcat-clone.config', 'utf8')) || {
@@ -82,4 +82,3 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
-
