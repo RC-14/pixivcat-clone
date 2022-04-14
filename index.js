@@ -124,11 +124,8 @@ const getHtml = (id) => new Promise((resolve, reject) => {
 });
 
 const getImageUrl = (json, id, page) => {
-    const regex = new RegExp(`(${id}_p)\d`)
-
     let url = json["illust"][id]["urls"]["regular"];
-    url = url.replace(regex, `$1${page - 1}`);
-
+    url = url.replace("_p0", `_p${page - 1}`);
     return new URL(url);
 };
 
