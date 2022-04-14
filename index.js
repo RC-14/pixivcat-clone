@@ -146,7 +146,7 @@ const server = http.createServer((req, res) => {
     console.log(`${req.method} ${req.url}`);
 
     let image = parsePath(req.url);
-    if (!image || image.page < 1) {
+    if (!image || image.page !== null && image.page < 1) {
         console.error("Bad request");
         res.statusCode = 400;
         res.end();
@@ -205,8 +205,8 @@ const server = http.createServer((req, res) => {
             }
 
             // Set response headers
-            res.setHeader('Content-Type', imageRes.getHeader('Content-Type'));
-            res.setHeader('Content-Length', imageRes.getHeader('Content-Length'));
+            res.setHeader('Content-Type', imageRes.headers['content-type']);
+            res.setHeader('Content-Length', imageRes.headers['content-length']);
             res.setHeader('Age', '0');
             res.setHeader('Cache-Control', 'public, max-age=31536000');
 
