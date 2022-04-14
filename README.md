@@ -18,6 +18,7 @@ The illustration ID can be found in the URL of the illustration page.
 `https://www.pixiv.net/artworks/<illustration_id>`
 
 The page number can simply be counted from 1 or read from the page number indicator.
+
 ![Arrow pointing at page number indicator](https://user-images.githubusercontent.com/61058098/163426735-dfe5928c-a5f5-4d1a-bea3-029b71606eac.png)
 
 Link to the illustration in the image: [https://www.pixiv.net/artworks/97571297](https://www.pixiv.net/artworks/97571297)
