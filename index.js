@@ -136,6 +136,9 @@ const server = http.createServer((req, res) => {
     // Set the response type to plain text for errors
     res.setHeader('Content-Type', 'text/plain');
 
+    // Print a message when the reply was sent
+    res.on('pipe', () => console.log(`Sent reply for ${req.url}`));
+
     // Catch favicon requests
     if (req.url === '/favicon.ico') {
         res.writeHead(404);
