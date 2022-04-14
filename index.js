@@ -149,10 +149,81 @@ const server = http.createServer((req, res) => {
 
     let image = parsePath(req.url);
     if (!image || image.page < 1) {
-        res.statusCode = 404;
+        console.error("Bad request");
+        res.statusCode = 400;
         res.end();
         return;
     }
+
+    // Request the html page
+    getHtml(image.illustId).then((html) => {
+        const json = getJsonFromHtml(html);
+
+        // Fail if json is invalid
+        if (!json) {
+            console.error("Failed to get JSON from HTML");
+            res.statusCode = 500;
+            res.end();
+            return;
+        }
+
+        if (image.page) {
+            // Fail if the page doesn't exist
+            if (json["illust"][image.illustId]["pageCount"] < image.page) {
+                console.error("Requested page does not exist");
+                res.statusCode = 404;
+                res.end();
+                return;
+            }
+            // Fail if pageCount is 1
+            if (json["illust"][image.illustId]["pageCount"] === 1) {
+                console.error("Illustration does not have multiple pages");
+                res.statusCode = 400;
+                res.end();
+                return;
+            }
+        } else {
+            // Fail if pageCount is not 1
+            if (json["illust"][image.illustId]["pageCount"] !== 1) {
+                console.error("Illustration has more than one page");
+                res.statusCode = 400;
+                res.end();
+                return;
+            }
+        }
+
+        const imageUrl = getImageUrl(json, image.illustId, image.page)
+
+        // Request the image
+        const imageReq = https.request(imageUrl, {
+            method: 'GET',
+            headers: imageRequestHeaders,
+        }, (imageRes) => {
+            if (imageRes.statusCode !== 200) {
+                console.error("Failed to get image");
+                res.statusCode = 500;
+                res.end();
+                return;
+            }
+
+            // Set response headers
+            res.setHeader('Content-Type', imageRes.getHeader('Content-Type'));
+            res.setHeader('Content-Length', imageRes.getHeader('Content-Length'));
+            res.setHeader('Age', '0');
+            res.setHeader('Cache-Control', 'public, max-age=31536000');
+
+            // Send the image
+            imageRes.pipe(res);
+        }).on('error', (e) => {
+            console.error(e);
+            res.statusCode = 500;
+            res.end();
+        });
+        imageReq.end();
+    }).catch((e) => {
+        res.statusCode = e;
+        res.end();
+    });
 });
 
 server.listen(port, () => {
