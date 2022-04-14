@@ -148,7 +148,7 @@ const server = http.createServer((req, res) => {
     console.log(`${req.method} ${req.url}`);
 
     let image = parsePath(req.url);
-    if (!image) {
+    if (!image || image.page < 1) {
         res.statusCode = 404;
         res.end();
         return;
