@@ -70,6 +70,27 @@ const parsePath = (path) => {
     return { illustId: pathMatch[1], page: pathMatch[2] || null };
 };
 
+const getJsonFromHtml = (html) => {
+    let json = html.split(`<meta name="preload-data" id="meta-preload-data" content='`);
+    if (json.length < 2) {
+        return null;
+    }
+    json = json[1];
+
+    json = json.split(`'>`);
+    if (json.length < 2) {
+        return null;
+    }
+    json = json[0];
+
+    try {
+        json = JSON.parse(json);
+    } catch (e) {
+        return null;
+    }
+    return json;
+};
+
 const server = http.createServer((req, res) => {
     let image = parsePath(req.url);
     if (!image) {
