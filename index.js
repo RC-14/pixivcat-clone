@@ -138,6 +138,13 @@ const server = http.createServer((req, res) => {
     // Set the response type to plain text for errors
     res.setHeader('Content-Type', 'text/plain');
 
+    // Catch favicon requests
+    if (req.url === '/favicon.ico') {
+        res.writeHead(404);
+        res.end();
+        return;
+    }
+
     console.log(`${req.method} ${req.url}`);
 
     let image = parsePath(req.url);
