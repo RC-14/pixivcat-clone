@@ -13,7 +13,7 @@ const zlib = require('zlib');
 const { port, userAgent, cookie } = (() => {
     // ONLY CONFIGURE FROM CONFIG FILE!
     // DO NOT CONFIGURE DIRECTLY IN CODE!
-    let config = JSON.parse(fs.readFileSync('pixivcat-clone.config', 'utf8')) || {
+    let config = JSON.parse(fs.readFileSync('config.json', 'utf8')) || {
         port: 8080, // Default http port
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36", // A Windows 10, Chrome 100 user agent
         cookie: "", // Default to empty string (no cookies) because I don't want to share my account
