@@ -135,6 +135,9 @@ const getImageUrl = (json, id, page) => {
 };
 
 const server = http.createServer((req, res) => {
+    // Set the response type to plain text for errors
+    res.setHeader('Content-Type', 'text/plain');
+
     let image = parsePath(req.url);
     if (!image) {
         res.statusCode = 404;
