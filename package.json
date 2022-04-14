@@ -2,7 +2,7 @@
     "private": true,
     "name": "pixivcat-clone",
     "version": "1.0.0",
-    "description": "Stolen code made working for node-js to steal images from pixiv.",
+    "description": "Pixiv.cat clone written for node-js",
     "main": "index.js",
     "scripts": {
         "start": "node index.js"
