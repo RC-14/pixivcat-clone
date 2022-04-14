@@ -205,8 +205,12 @@ const server = http.createServer((req, res) => {
             }
 
             // Set response headers
-            res.setHeader('Content-Type', imageRes.headers['content-type']);
-            res.setHeader('Content-Length', imageRes.headers['content-length']);
+            if (imageRes.headers["content-type"]) {
+                res.setHeader('Content-Type', imageRes.headers["content-type"]);
+            }
+            if (imageRes.headers["content-length"]) {
+                res.setHeader('Content-Length', imageRes.headers["content-length"]);
+            }
             res.setHeader('Age', '0');
             res.setHeader('Cache-Control', 'public, max-age=31536000');
 
