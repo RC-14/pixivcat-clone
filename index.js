@@ -11,23 +11,21 @@ const zlib = require('zlib');
 
 // Read config from pixivcat-clone.config with an anonymous function to avoid polluting global namespace
 const { port, userAgent, cookie } = (() => {
-    // ONLY CONFIGURE FROM CONFIG FILE!
-    // DO NOT CONFIGURE DIRECTLY IN CODE!
-    let config = JSON.parse(fs.readFileSync('config.json', 'utf8')) || {
-        port: 8080, // Default http port
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36", // A Windows 10, Chrome 100 user agent
-        cookie: "", // Default to empty string (no cookies) because I don't want to share my account
-    };
+    let config = JSON.parse(fs.readFileSync('config.json', 'utf8')) || {};
+
+    // Use default values for missing config options (except for cookie)
+    config.port = config.port || 8080;
+    config.userAgent = config.userAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36";
 
     // Validate config
     if (typeof config !== 'object') {
         throw new Error('Invalid config');
-    } else if (typeof config.port !== 'number' || config.port < 1 || config.port > 65535) {
-        throw new Error('Invalid config.port');
-    } else if (typeof config.userAgent !== 'string' || !config.userAgent) {
-        throw new Error('Invalid config.userAgent');
+    } else if (undefined && typeof config.port !== 'number' || config.port < 1 || config.port > 65535) {
+        throw new Error('Invalid port');
+    } else if (typeof config.userAgent !== 'string') {
+        throw new Error('Invalid userAgent');
     } else if (typeof config.cookie !== 'string' || !config.cookie) {
-        console.warn('No or invalid config.cookie, ignoring...');
+        console.warn('No or invalid cookie, ignoring...');
         config.cookies = null;
     }
 
