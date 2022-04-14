@@ -7,6 +7,7 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
+const zlib = require('zlib');
 
 // Read config from pixivcat-clone.config with an anonymous function to avoid polluting global namespace
 const { port, userAgent, cookie } = (() => {
@@ -90,6 +91,39 @@ const getJsonFromHtml = (html) => {
     }
     return json;
 };
+
+const getHtml = (id) => new Promise((resolve, reject) => {
+    const req = https.request({
+        host: 'www.pixiv.net',
+        path: `/en/artworks/${id}`,
+        method: 'GET',
+        headers: htmlRequestHeaders,
+    }, (res) => {
+        if (res.statusCode !== 200) {
+            reject(404);
+            return;
+        }
+
+        let buffer = [];
+
+        // Respnose is gzipped
+        let gunzip = zlib.createGunzip();
+        res.pipe(gunzip);
+
+        gunzip.on('data', (chunk) => {
+            buffer.push(chunk.toString());
+        }).on('end', () => {
+            resolve(buffer.join(''));
+        }).on('error', (e) => {
+            console.error(e);
+            reject(500);
+        });
+    }).on('error', (e) => {
+        console.error(e);
+        reject(500);
+    });
+    req.end();
+});
 
 const server = http.createServer((req, res) => {
     let image = parsePath(req.url);
