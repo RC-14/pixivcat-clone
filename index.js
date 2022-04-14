@@ -190,7 +190,7 @@ const server = http.createServer((req, res) => {
             }
         }
 
-        const imageUrl = getImageUrl(json, image.illustId, image.page)
+        const imageUrl = getImageUrl(json, image.illustId, image.page || 1);
 
         // Request the image
         const imageReq = https.request(imageUrl, {
