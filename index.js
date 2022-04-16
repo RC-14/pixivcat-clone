@@ -1,15 +1,9 @@
-// Simple http server that serves images from pixiv.net
-// Listens on standard port 8080 or port specified in the environment variable PORT
-// Images should be requested using one of the following paths:
-// For illustrations with a single image: /<illustID>.jpg
-// For illustrations with multiple images: /<illustID>-<page>.jpg
-
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const zlib = require('zlib');
 
-// Read config from pixivcat-clone.config with an anonymous function to avoid polluting global namespace
+// Read config from config file with an anonymous function to avoid polluting global namespace
 const { port, userAgent, cookie } = (() => {
     let config = JSON.parse(fs.readFileSync('config.json', 'utf8')) || {};
 
@@ -61,6 +55,7 @@ const imageRequestHeaders = {
     "user-agent": userAgent,
 };
 
+// Parse the url and return the id and page (/<illustId>-<page>.<extension>)
 const parsePath = (path) => {
     const pathMatch = path.match(/^\/(\d+)(?:-(\d+))?\.(jpe?g|png|gif)$/);
     if (!pathMatch) {
@@ -70,6 +65,8 @@ const parsePath = (path) => {
 };
 
 const getJsonFromHtml = (html) => {
+    // The json is in the content attribute of the meta tag (name and id below)
+    // so we can get it by simply splitting the html
     let json = html.split(`<meta name="preload-data" id="meta-preload-data" content='`);
     if (json.length < 2) {
         return null;
@@ -82,6 +79,7 @@ const getJsonFromHtml = (html) => {
     }
     json = json[0];
 
+    // Just in case we didn't get json data
     try {
         json = JSON.parse(json);
     } catch (e) {
@@ -90,6 +88,7 @@ const getJsonFromHtml = (html) => {
     return json;
 };
 
+// Request the html page for the given id and return a promise that resolves with the html
 const getHtml = (id) => new Promise((resolve, reject) => {
     const req = https.request({
         host: 'www.pixiv.net',
@@ -123,8 +122,11 @@ const getHtml = (id) => new Promise((resolve, reject) => {
     req.end();
 });
 
+// Use a function to make the code more readable
 const getImageUrl = (json, id, page) => {
+    // The website uses the "regular" image urls
     let url = json["illust"][id]["urls"]["regular"];
+    // There is only a url for the first page (p0) but we can simply convert it to the url for the page we need.
     url = url.replace("_p0", `_p${page - 1}`);
     return new URL(url);
 };
@@ -143,9 +145,12 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // Print a message with the http method and url when a request was received
     console.log(`${req.method} ${req.url}`);
 
+    // Not the actual image but the id and page
     let image = parsePath(req.url);
+    // Fail if the request is invalid
     if (!image || image.page !== null && image.page < 1) {
         console.error("Bad request");
         res.statusCode = 400;
@@ -153,7 +158,6 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // Request the html page
     getHtml(image.illustId).then((html) => {
         const json = getJsonFromHtml(html);
 
@@ -166,14 +170,14 @@ const server = http.createServer((req, res) => {
         }
 
         if (image.page) {
-            // Fail if the page doesn't exist
+            // Fail if the requested page doesn't exist
             if (json["illust"][image.illustId]["pageCount"] < image.page) {
                 console.error("Requested page does not exist");
                 res.statusCode = 404;
                 res.end();
                 return;
             }
-            // Fail if pageCount is 1
+            // Fail if a page was specified in the request but the illustration doesn't have multipage images
             if (json["illust"][image.illustId]["pageCount"] === 1) {
                 console.error("Illustration does not have multiple pages");
                 res.statusCode = 400;
@@ -181,7 +185,7 @@ const server = http.createServer((req, res) => {
                 return;
             }
         } else {
-            // Fail if pageCount is not 1
+            // Fail if no page was specified in the request but the illustration has more than one page
             if (json["illust"][image.illustId]["pageCount"] !== 1) {
                 console.error("Illustration has more than one page");
                 res.statusCode = 400;
@@ -192,11 +196,11 @@ const server = http.createServer((req, res) => {
 
         const imageUrl = getImageUrl(json, image.illustId, image.page || 1);
 
-        // Request the image
         const imageReq = https.request(imageUrl, {
             method: 'GET',
             headers: imageRequestHeaders,
         }, (imageRes) => {
+            // Fail if the Pixiv rejected our request
             if (imageRes.statusCode !== 200) {
                 console.error("Failed to get image");
                 res.statusCode = 500;
@@ -204,30 +208,38 @@ const server = http.createServer((req, res) => {
                 return;
             }
 
-            // Set response headers
+            // Use Content-Type and Content-Length we got from Pixiv
             if (imageRes.headers["content-type"]) {
                 res.setHeader('Content-Type', imageRes.headers["content-type"]);
             }
             if (imageRes.headers["content-length"]) {
                 res.setHeader('Content-Length', imageRes.headers["content-length"]);
             }
+            // Let the client cache the image for a year (31536000 seconds / 60 / 60 / 24 = 365 days)
             res.setHeader('Age', '0');
             res.setHeader('Cache-Control', 'public, max-age=31536000');
 
-            // Send the image
+            // Pipe the image to the client
             imageRes.pipe(res);
         }).on('error', (e) => {
+            // Something went wrong and we don't know what but it's probably our fault
             console.error(e);
             res.statusCode = 500;
             res.end();
         });
         imageReq.end();
     }).catch((e) => {
+        // The request for the html page failed and we got an http error to send to the client
         res.statusCode = e;
         res.end();
     });
 });
 
-server.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-});
+try {
+    server.listen(port, () => {
+        console.log(`Server listening on port ${port}`);
+    });
+} catch (error) {
+    console.error(error);
+    console.log("Failed to start server - Maybe try another port?");
+}
