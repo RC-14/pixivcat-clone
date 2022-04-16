@@ -2,17 +2,17 @@
 
 ## Usage
 
-Start the server:
-
-```bash
+```sh
 npm start
 ```
 
-Images from pixiv illustrations can now be accessed by their ID and page number.
+Images from pixiv illustrations can be accessed by their ID and page number.
 
 Illustrations with only one page: `http://localhost:8080/<illustration_id>.[png|jpg|gif]`
 
 Illustrations with multiple pages: `http://localhost:8080/<illustration_id>-<page_number>.[png|jpg|gif]`
+
+__Regardless of the extension in your request you will probably get a jpg because that's the format Pixiv uses.__
 
 The illustration ID can be found in the URL of the illustration page.
 `https://www.pixiv.net/artworks/<illustration_id>`
@@ -33,4 +33,4 @@ Configuration is done via a `config.json` file in the working directory.
 - `userAgent`: The user agent of your browser. *(String)*
 - `cookie`: The cookie that your browser sends to [pixiv.net](https://www.pixiv.net/). *(String)*
 
-The cookie is only neccessary if you want to get images that are not accessible without an account (e.g. *R-18* rated illustrations).
+The cookie is only neccessary if you want to get images that are not accessible without an account (e.g. *R-18* illustrations).
