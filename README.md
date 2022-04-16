@@ -1,5 +1,9 @@
 # Pixiv.cat clone
 
+## Requirements
+
+You need to have [Node.js](https://nodejs.org/) installed.
+
 ## Usage
 
 ```sh
