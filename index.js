@@ -221,6 +221,22 @@ const server = http.createServer((req, res) => {
 
 			// Pipe the image to the client
 			imageRes.pipe(res);
+
+			// Check if "./store" is a directory
+			const dir = './store/';
+			const fileName = image.illustId + (image.page ? `-${image.page}` : '') + '.jpg';
+			if (fs.existsSync(dir) && !fs.lstatSync(dir).isDirectory()) {
+				fs.rmSync(dir);
+			} else if (!fs.existsSync(dir)) {
+				fs.mkdirSync(dir);
+			}
+
+			// Check if file already exists
+			if (fs.existsSync(dir + fileName)) return;
+
+			// Write the image to the file
+			const file = fs.createWriteStream(dir + fileName);
+			imageRes.pipe(file);
 		}).on('error', (e) => {
 			// Something went wrong and we don't know what but it's probably our fault
 			console.error(e);
