@@ -226,13 +226,18 @@ const server = http.createServer((req, res) => {
 			const dir = './store/';
 			const fileName = image.illustId + (image.page ? `-${image.page}` : '') + '.jpg';
 			if (fs.existsSync(dir) && !fs.lstatSync(dir).isDirectory()) {
+				console.error(`"${dir}" is not a directory! Deleting it...`);
 				fs.rmSync(dir);
-			} else if (!fs.existsSync(dir)) {
+			}
+			if (!fs.existsSync(dir)) {
+				console.log(`"${dir}" does not exist, creating...`);
 				fs.mkdirSync(dir);
 			}
 
 			// Check if file already exists
 			if (fs.existsSync(dir + fileName)) return;
+
+			console.log(`Saving to "${dir}${fileName}" ...`);
 
 			// Write the image to the file
 			const file = fs.createWriteStream(dir + fileName);
