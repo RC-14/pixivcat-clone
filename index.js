@@ -5,7 +5,11 @@ const zlib = require('zlib');
 
 // Read config from config file with an anonymous function to avoid polluting global namespace
 const { port, userAgent, cookie } = (() => {
-	let config = JSON.parse(fs.readFileSync('config.json', 'utf8')) || {};
+	let config = {};
+
+	try {
+		config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+	} catch(e) {}
 
 	// Use default values for missing config options (except for cookie)
 	config.port = config.port || 8080;
