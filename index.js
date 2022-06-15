@@ -4,7 +4,7 @@ const https = require('https');
 const zlib = require('zlib');
 
 // Read config from config file with an anonymous function to avoid polluting global namespace
-const { port, userAgent, cookie } = (() => {
+const { saveImages, port, userAgent, cookie } = (() => {
 	let config = {};
 
 	try {
@@ -12,13 +12,16 @@ const { port, userAgent, cookie } = (() => {
 	} catch(e) {}
 
 	// Use default values for missing config options (except for cookie)
+	config.saveImages = config.saveImages != null ? config.saveImages : true;
 	config.port = config.port || 8080;
 	config.userAgent = config.userAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36";
 
 	// Validate config
 	if (typeof config !== 'object') {
 		throw new Error('Invalid config');
-	} else if (undefined && typeof config.port !== 'number' || config.port < 1 || config.port > 65535) {
+	} else if (typeof config.saveImages !== 'boolean') {
+		throw new Error('Invalid value for store');
+	} else if (typeof config.port !== 'number' || isNaN(config.port) || config.port < 1 || config.port > 65535) {
 		throw new Error('Invalid port');
 	} else if (typeof config.userAgent !== 'string') {
 		throw new Error('Invalid userAgent');
@@ -225,6 +228,9 @@ const server = http.createServer((req, res) => {
 
 			// Pipe the image to the client
 			imageRes.pipe(res);
+
+			// Check if we should save the images
+			if (!saveImages) return;
 
 			// Check if "./store" is a directory
 			const dir = './store/';
