@@ -20,7 +20,7 @@ const { saveImages, port, userAgent, cookie } = (() => {
 	if (typeof config !== 'object') {
 		throw new Error('Invalid config');
 	} else if (typeof config.saveImages !== 'boolean') {
-		throw new Error('Invalid value for store');
+		throw new Error('Invalid value for saveImages');
 	} else if (typeof config.port !== 'number' || isNaN(config.port) || config.port < 1 || config.port > 65535) {
 		throw new Error('Invalid port');
 	} else if (typeof config.userAgent !== 'string') {
