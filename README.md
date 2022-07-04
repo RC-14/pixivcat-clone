@@ -43,6 +43,8 @@ Link to the illustration in the image: [https://www.pixiv.net/artworks/97571297]
 
 Images are also saved to the `store` directory within the working directory. (will be created if  it doesn't exist)
 
+If saving images doesn't work, disable it in the configuration file.
+
 ## Configuration
 
 __This is optional:__ There are default values that will be used if nothing is specified.
