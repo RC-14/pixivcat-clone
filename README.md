@@ -4,6 +4,8 @@
 
 You need to have [Node.js](https://nodejs.org/) installed.
 
+An account is __NOT__ required, even if the image is age restricted.
+
 ## Usage
 
 ```sh
