@@ -155,17 +155,17 @@ const server = http.createServer((req, res) => {
 	// Print a message with the http method and url when a request was received
 	console.log(`${req.method} ${req.url}`);
 
-	// Not the actual image but the id and page
-	let image = parsePath(req.url);
+	// Illustration id and page
+	let imageInfo = parsePath(req.url);
 	// Fail if the request is invalid
-	if (!image || image.page !== null && image.page < 1) {
+	if (!imageInfo || imageInfo.page !== null && imageInfo.page < 1) {
 		console.error("Bad request");
 		res.statusCode = 400;
 		res.end();
 		return;
 	}
 
-	getHtml(image.illustId).then((html) => {
+	getHtml(imageInfo.illustId).then((html) => {
 		const json = getJsonFromHtml(html);
 
 		// Fail if json is invalid
@@ -176,16 +176,16 @@ const server = http.createServer((req, res) => {
 			return;
 		}
 
-		if (image.page) {
+		if (imageInfo.page) {
 			// Fail if the requested page doesn't exist
-			if (json["illust"][image.illustId]["pageCount"] < image.page) {
+			if (json["illust"][imageInfo.illustId]["pageCount"] < imageInfo.page) {
 				console.error("Requested page does not exist");
 				res.statusCode = 404;
 				res.end();
 				return;
 			}
 			// Fail if a page was specified in the request but the illustration doesn't have multipage images
-			if (json["illust"][image.illustId]["pageCount"] === 1) {
+			if (json["illust"][imageInfo.illustId]["pageCount"] === 1) {
 				console.error("Illustration does not have multiple pages");
 				res.statusCode = 400;
 				res.end();
@@ -193,7 +193,7 @@ const server = http.createServer((req, res) => {
 			}
 		} else {
 			// Fail if no page was specified in the request but the illustration has more than one page
-			if (json["illust"][image.illustId]["pageCount"] !== 1) {
+			if (json["illust"][imageInfo.illustId]["pageCount"] !== 1) {
 				console.error("Illustration has more than one page");
 				res.statusCode = 400;
 				res.end();
@@ -201,7 +201,7 @@ const server = http.createServer((req, res) => {
 			}
 		}
 
-		const imageUrl = getImageUrl(json, image.illustId, image.page || 1);
+		const imageUrl = getImageUrl(json, imageInfo.illustId, imageInfo.page || 1);
 
 		const imageReq = https.request(imageUrl, {
 			method: 'GET',
@@ -234,7 +234,7 @@ const server = http.createServer((req, res) => {
 
 			// Check if "./store" is a directory
 			const dir = './store/';
-			const fileName = image.illustId + (image.page ? `-${image.page}` : '') + '.jpg';
+			const fileName = imageInfo.illustId + (imageInfo.page ? `-${imageInfo.page}` : '') + '.jpg';
 			if (fs.existsSync(dir) && !fs.lstatSync(dir).isDirectory()) {
 				console.error(`"${dir}" is not a directory! Deleting it...`);
 				fs.rmSync(dir);
