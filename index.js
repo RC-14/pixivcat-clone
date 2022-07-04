@@ -1,10 +1,9 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
-const zlib = require('zlib');
 
 // Read config from config file with an anonymous function to avoid polluting global namespace
-const { saveImages, port, userAgent, cookie } = (() => {
+const { saveImages, port } = (() => {
 	let config = {};
 
 	try {
@@ -14,7 +13,6 @@ const { saveImages, port, userAgent, cookie } = (() => {
 	// Use default values for missing config options (except for cookie)
 	config.saveImages = config.saveImages != null ? config.saveImages : true;
 	config.port = config.port || 8080;
-	config.userAgent = config.userAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36";
 
 	// Validate config
 	if (typeof config !== 'object') {
@@ -23,43 +21,21 @@ const { saveImages, port, userAgent, cookie } = (() => {
 		throw new Error('Invalid value for saveImages');
 	} else if (typeof config.port !== 'number' || isNaN(config.port) || config.port < 1 || config.port > 65535) {
 		throw new Error('Invalid port');
-	} else if (typeof config.userAgent !== 'string') {
-		throw new Error('Invalid userAgent');
-	} else if (typeof config.cookie !== 'string' || !config.cookie) {
-		console.warn('No or invalid cookie, ignoring...');
-		config.cookies = null;
 	}
 
 	return config;
 })();
 
-const htmlRequestHeaders = {
-	"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-	"accept-encoding": "gzip, deflate, br",
-	"accept-language": "en-US,en;q=0.9",
+const jsonRequestHeaders = {
+	"accept": "application/json",
 	"cache-control": "max-age=0",
-	"cookie": cookie || "",
-	"sec-fetch-dest": "document",
-	"sec-fetch-mode": "navigate",
-	"sec-fetch-site": "none",
-	"sec-fetch-user": "?1",
-	"sec-gpc": "1",
-	"upgrade-insecure-requests": "1",
-	"user-agent": userAgent,
+	"pragma": "no-cache",
 };
 const imageRequestHeaders = {
-	"accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-	"accept-encoding": "gzip, deflate, br",
-	"accept-language": "en-US,en;q=0.9",
+	"accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*",
 	"cache-control": "no-cache",
-	"dnt": "1",
 	"pragma": "no-cache",
 	"referer": "https://www.pixiv.net/",
-	"sec-fetch-dest": "image",
-	"sec-fetch-mode": "no-cors",
-	"sec-fetch-site": "cross-site",
-	"sec-gpc": "1",
-	"user-agent": userAgent,
 };
 
 // Parse the url and return the id and page (/<illustId>-<page>.<extension>)
@@ -71,53 +47,44 @@ const parsePath = (path) => {
 	return { illustId: pathMatch[1], page: pathMatch[2] || null };
 };
 
-const getJsonFromHtml = (html) => {
-	// The json is in the content attribute of the meta tag (name and id below)
-	// so we can get it by simply splitting the html
-	let json = html.split(`<meta name="preload-data" id="meta-preload-data" content='`);
-	if (json.length < 2) {
-		return null;
-	}
-	json = json[1];
-
-	json = json.split(`'>`);
-	if (json.length < 2) {
-		return null;
-	}
-	json = json[0];
-
-	// Just in case we didn't get json data
-	try {
-		json = JSON.parse(json);
-	} catch (e) {
-		return null;
-	}
-	return json;
-};
-
 // Request the html page for the given id and return a promise that resolves with the html
-const getHtml = (id) => new Promise((resolve, reject) => {
+const getJson = (id) => new Promise((resolve, reject) => {
 	const req = https.request({
 		host: 'www.pixiv.net',
-		path: `/en/artworks/${id}`,
+		path: `/ajax/illust/${id}?lang=en`,
 		method: 'GET',
-		headers: htmlRequestHeaders,
+		headers: jsonRequestHeaders,
 	}, (res) => {
 		if (res.statusCode !== 200) {
 			reject(404);
 			return;
 		}
 
-		let buffer = [];
+		const buffer = [];
 
-		// Respnose is gzipped
-		let gunzip = zlib.createGunzip();
-		res.pipe(gunzip);
-
-		gunzip.on('data', (chunk) => {
-			buffer.push(chunk.toString());
+		res.on('data', (chunk) => {
+			buffer.push(chunk);
 		}).on('end', () => {
-			resolve(buffer.join(''));
+			const json = buffer.join('');
+			
+			try {
+				const data = JSON.parse(json);
+
+				if (data.error) {
+					console.error(`Pixiv error: ${data.message}`);
+					reject(404);
+					return;
+				} else if (data.body == null || typeof data.body !== 'object' || Object.keys(data.body).length === 0) {
+					console.error('Empty response from pixiv');
+					reject(404);
+					return;
+				}
+
+				resolve(data.body);
+			} catch (error) {
+				console.error(error);
+				reject(500);
+			}
 		}).on('error', (e) => {
 			console.error(e);
 			reject(500);
@@ -130,15 +97,26 @@ const getHtml = (id) => new Promise((resolve, reject) => {
 });
 
 // Use a function to make the code more readable
-const getImageUrl = (json, id, page) => {
+const getImageUrl = (json, page) => {
 	// The website uses the "regular" image urls
-	let url = json["illust"][id]["urls"]["regular"];
-	// There is only a url for the first page (p0) but we can simply convert it to the url for the page we need.
+	let url = json["urls"]["regular"];
+	// JSON only contains a url for the first page (p0) but we can simply convert it to the url for the page we need.
 	url = url.replace("_p0", `_p${page - 1}`);
 	return new URL(url);
 };
 
 const server = http.createServer((req, res) => {
+	const rejectRequest = (code, consoleMessage) => {
+		res.writeHead(code);
+		res.end();
+
+		if (consoleMessage == null) {
+			console.error(http.STATUS_CODES[code]);
+		} else {
+			console.error(consoleMessage);
+		}
+	}
+
 	// Set the response type to plain text for errors
 	res.setHeader('Content-Type', 'text/plain');
 
@@ -147,8 +125,7 @@ const server = http.createServer((req, res) => {
 
 	// Catch favicon requests
 	if (req.url === '/favicon.ico') {
-		res.writeHead(404);
-		res.end();
+		rejectRequest(404);
 		return;
 	}
 
@@ -159,49 +136,34 @@ const server = http.createServer((req, res) => {
 	let imageInfo = parsePath(req.url);
 	// Fail if the request is invalid
 	if (!imageInfo || imageInfo.page !== null && imageInfo.page < 1) {
-		console.error("Bad request");
-		res.statusCode = 400;
-		res.end();
+		rejectRequest(400);
 		return;
 	}
 
-	getHtml(imageInfo.illustId).then((html) => {
-		const json = getJsonFromHtml(html);
-
-		// Fail if json is invalid
-		if (!json) {
-			console.error("Failed to get JSON from HTML");
-			res.statusCode = 500;
-			res.end();
-			return;
-		}
-
+	const jsonPromise = getJson(imageInfo.illustId);
+	jsonPromise.catch(rejectRequest);
+	jsonPromise.then((json) => {
+		// Check if the provided page is valid
 		if (imageInfo.page) {
 			// Fail if the requested page doesn't exist
-			if (json["illust"][imageInfo.illustId]["pageCount"] < imageInfo.page) {
-				console.error("Requested page does not exist");
-				res.statusCode = 404;
-				res.end();
+			if (json["pageCount"] < imageInfo.page) {
+				rejectRequest(404, "Requested page doesn't exist");
 				return;
 			}
 			// Fail if a page was specified in the request but the illustration doesn't have multipage images
-			if (json["illust"][imageInfo.illustId]["pageCount"] === 1) {
-				console.error("Illustration does not have multiple pages");
-				res.statusCode = 400;
-				res.end();
+			if (json["pageCount"] === 1) {
+				rejectRequest(400, "Illustration doesn't have multiple pages");
 				return;
 			}
 		} else {
 			// Fail if no page was specified in the request but the illustration has more than one page
-			if (json["illust"][imageInfo.illustId]["pageCount"] !== 1) {
-				console.error("Illustration has more than one page");
-				res.statusCode = 400;
-				res.end();
+			if (json["pageCount"] !== 1) {
+				rejectRequest(400, "Illustration has more than one page");
 				return;
 			}
 		}
 
-		const imageUrl = getImageUrl(json, imageInfo.illustId, imageInfo.page || 1);
+		const imageUrl = getImageUrl(json, imageInfo.page || 1);
 
 		const imageReq = https.request(imageUrl, {
 			method: 'GET',
@@ -232,9 +194,10 @@ const server = http.createServer((req, res) => {
 			// Check if we should save the images
 			if (!saveImages) return;
 
-			// Check if "./store" is a directory
 			const dir = './store/';
 			const fileName = imageInfo.illustId + (imageInfo.page ? `-${imageInfo.page}` : '') + '.jpg';
+
+			// Make sure "store" is a directory
 			if (fs.existsSync(dir) && !fs.lstatSync(dir).isDirectory()) {
 				console.error(`"${dir}" is not a directory! Deleting it...`);
 				fs.rmSync(dir);
@@ -252,17 +215,8 @@ const server = http.createServer((req, res) => {
 			// Write the image to the file
 			const file = fs.createWriteStream(dir + fileName);
 			imageRes.pipe(file);
-		}).on('error', (e) => {
-			// Something went wrong and we don't know what but it's probably our fault
-			console.error(e);
-			res.statusCode = 500;
-			res.end();
-		});
+		}).on('error', rejectRequest);
 		imageReq.end();
-	}).catch((e) => {
-		// The request for the html page failed and we got an http error to send to the client
-		res.statusCode = e;
-		res.end();
 	});
 });
 
