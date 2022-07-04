@@ -1,5 +1,16 @@
 # Pixiv.cat clone
 
+## What is pixiv.cat and why do we need a clone?
+
+[pixiv.cat](https://pixiv.cat/) is a website where that could be used to access illustrations from [pixiv.net](https://pixiv.net/) without having to use the official app or website.
+
+Sadly the certificate of [pixiv.cat](https://pixiv.cat/) expired which means the website can't be used anymore because it requires a secure connection that isn't possible if the certificate is expired.
+
+This clone is a drop in replacement for [pixiv.cat](https://pixiv.cat/) with the caviat that you have to host it yourself.
+
+The purpose of this project is to be a replacement for the `https://pixiv.cat/<illustration_id>-<page_number>.[png|jpg|gif]` method of getting the images of pixiv illustrations.
+This project __DOESN'T__ aim to replace any other functionality of [pixiv.cat](https://pixiv.cat/).
+
 ## Requirements
 
 You need to have [Node.js](https://nodejs.org/) installed.
