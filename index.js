@@ -26,11 +26,13 @@ const { saveImages, port } = (() => {
 	return config;
 })();
 
+// For the request to get the JSON we don't need headers but I keep them here anyway
 const jsonRequestHeaders = {
 	"accept": "application/json",
 	"cache-control": "max-age=0",
 	"pragma": "no-cache",
 };
+// For pixiv to send us the image we need to set the referer to "https://www.pixiv.net/" otherwise it will return a 403
 const imageRequestHeaders = {
 	"accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*",
 	"cache-control": "no-cache",
@@ -47,10 +49,11 @@ const parsePath = (path) => {
 	return { illustId: pathMatch[1], page: pathMatch[2] || null };
 };
 
-// Request the html page for the given id and return a promise that resolves with the html
+// Use the pixiv API to get the illustration information that contains the url to the first image from pixiv
 const getJson = (id) => new Promise((resolve, reject) => {
 	const req = https.request({
 		host: 'www.pixiv.net',
+		// The path used by the API
 		path: `/ajax/illust/${id}?lang=en`,
 		method: 'GET',
 		headers: jsonRequestHeaders,
@@ -67,14 +70,17 @@ const getJson = (id) => new Promise((resolve, reject) => {
 		}).on('end', () => {
 			const json = buffer.join('');
 			
+			// In case the JSON is for some reason not valid
 			try {
 				const data = JSON.parse(json);
 
+				// If the illustration is not found error will be true and an error message will be in the message property
 				if (data.error) {
 					console.error(`Pixiv error: ${data.message}`);
 					reject(404);
 					return;
 				} else if (data.body == null || typeof data.body !== 'object' || Object.keys(data.body).length === 0) {
+					// This should never happen but if it does we can't do anything about it because they fundamentally changed the API
 					console.error('Empty response from pixiv');
 					reject(404);
 					return;
@@ -96,7 +102,6 @@ const getJson = (id) => new Promise((resolve, reject) => {
 	req.end();
 });
 
-// Use a function to make the code more readable
 const getImageUrl = (json, page) => {
 	// The website uses the "regular" image urls
 	let url = json["urls"]["regular"];
@@ -106,6 +111,7 @@ const getImageUrl = (json, page) => {
 };
 
 const server = http.createServer((req, res) => {
+	// Use a function to avoid repetitive code and make it easier to read
 	const rejectRequest = (code, consoleMessage) => {
 		res.writeHead(code);
 		res.end();
@@ -120,14 +126,14 @@ const server = http.createServer((req, res) => {
 	// Set the response type to plain text for errors
 	res.setHeader('Content-Type', 'text/plain');
 
-	// Print a message when the reply was sent
-	res.on('pipe', () => console.log(`Sent reply for ${req.url}`));
-
 	// Catch favicon requests
 	if (req.url === '/favicon.ico') {
 		rejectRequest(404);
 		return;
 	}
+
+	// Print a message when the reply was sent
+	res.on('pipe', () => console.log(`Sent reply for ${req.url}`));
 
 	// Print a message with the http method and url when a request was received
 	console.log(`${req.method} ${req.url}`);
@@ -171,9 +177,7 @@ const server = http.createServer((req, res) => {
 		}, (imageRes) => {
 			// Fail if the Pixiv rejected our request
 			if (imageRes.statusCode !== 200) {
-				console.error("Failed to get image");
-				res.statusCode = 500;
-				res.end();
+				rejectRequest(500, "Failed to get image");
 				return;
 			}
 
@@ -191,7 +195,7 @@ const server = http.createServer((req, res) => {
 			// Pipe the image to the client
 			imageRes.pipe(res);
 
-			// Check if we should save the images
+			// Check if we should save the image
 			if (!saveImages) return;
 
 			const dir = './store/';
