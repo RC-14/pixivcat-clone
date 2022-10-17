@@ -8,7 +8,7 @@ const { saveImages, port } = (() => {
 
 	try {
 		config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-	} catch(e) {}
+	} catch (e) { }
 
 	// Use default values for missing config options (except for cookie)
 	config.saveImages = config.saveImages != null ? config.saveImages : true;
@@ -69,7 +69,7 @@ const getJson = (id) => new Promise((resolve, reject) => {
 			buffer.push(chunk);
 		}).on('end', () => {
 			const json = buffer.join('');
-			
+
 			// In case the JSON is for some reason not valid
 			try {
 				const data = JSON.parse(json);
@@ -121,7 +121,7 @@ const server = http.createServer((req, res) => {
 		} else {
 			console.error(consoleMessage);
 		}
-	}
+	};
 
 	// Set the response type to plain text for errors
 	res.setHeader('Content-Type', 'text/plain');
