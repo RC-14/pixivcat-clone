@@ -1,5 +1,11 @@
 # Pixiv.cat clone
 
+This was made because I thought it would be easier to make a crappy http server with node.js instead of putting this functionality directly into the browser extension it was made for.
+
+Because the browser extension now uses the Pixiv API directly, this project isn't neccessary anymore.
+
+[The browser extension](https://github.com/RC-14/H3NTI3sTools)
+
 ## What is pixiv.cat and why do we need a clone?
 
 [pixiv.cat](https://pixiv.cat/) is a website where that could be used to access illustrations from [pixiv.net](https://pixiv.net/) without having to use the official app or website.
